@@ -32,6 +32,7 @@ jobs:
         WITH_V: true
 ```
 
+
 _NOTE: set the fetch-depth for `actions/checkout@v2` to be sure you retrieve all commits to look for the semver commit message._
 
 #### Options
