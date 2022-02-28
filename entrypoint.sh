@@ -7,6 +7,7 @@ default_semvar_bump=${DEFAULT_BUMP:-minor}
 with_v=${WITH_V:-false}
 release_branches=${RELEASE_BRANCHES:-master,main}
 custom_tag=${CUSTOM_TAG}
+prefix=${PREFIX:-""}
 source=${SOURCE:-.}
 dryrun=${DRY_RUN:-false}
 initial_version=${INITIAL_VERSION:-0.0.0}
@@ -21,6 +22,7 @@ echo -e "\tDEFAULT_BUMP: ${default_semvar_bump}"
 echo -e "\tWITH_V: ${with_v}"
 echo -e "\tRELEASE_BRANCHES: ${release_branches}"
 echo -e "\tCUSTOM_TAG: ${custom_tag}"
+echo -e "\tPREFIX: ${prefix}"
 echo -e "\tSOURCE: ${source}"
 echo -e "\tDRY_RUN: ${dryrun}"
 echo -e "\tINITIAL_VERSION: ${initial_version}"
@@ -57,7 +59,8 @@ case "$tag_context" in
         pre_tag="$(semver "$pre_taglist" | tail -n 1)"
         ;;
     *branch*) 
-        taglist="$(git tag --list --merged HEAD --sort=-v:refname | grep -E "$tagFmt")"
+        # taglist="$(git tag --list --merged HEAD --sort=-v:refname | grep -E "$tagFmt")"
+        taglist="$(git tag --list --merged HEAD --sort=-v:refname | sed -e "s/^$prefix//" | sort | grep -E "$tagFmt")"
         tag="$(semver $taglist | tail -n 1)"
 
         pre_taglist="$(git tag --list --merged HEAD --sort=-v:refname | grep -E "$preTagFmt")"
@@ -134,6 +137,11 @@ fi
 if [ ! -z $custom_tag ]
 then
     new="$custom_tag"
+fi
+
+if [ ! -z $prefix ]
+then
+    new="$prefix-$new"
 fi
 
 if $pre_release
