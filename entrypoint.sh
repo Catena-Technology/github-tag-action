@@ -70,8 +70,18 @@ then
         * ) echo "Unrecognised context"; exit 1;;
     esac
 else
-    taglist="$(git tag --list --merged HEAD --sort=-v:refname $prefix* | sed -e "s/^$prefix-//" | grep -E "$tagFmt")"
-    tag="$(semver $taglist | tail -n 1)"
+# get latest tag that looks like a semver (with or without v)
+    case "$tag_context" in
+        *repo*)
+            taglist="$(git for-each-ref --format '%(refname:lstrip=2)' --sort=-v:refname | grep $prefix- | sed -e "s/^$prefix-//" | grep -E "$tagFmt")"
+            tag="$(semver $taglist | tail -n 1)"
+            ;;            
+        *branch*)         
+            taglist="$(git tag --list --merged HEAD --sort=-v:refname $prefix* | sed -e "s/^$prefix-//" | grep -E "$tagFmt")"
+            tag="$(semver $taglist | tail -n 1)"
+            ;;
+        * ) echo "Unrecognised context"; exit 1;;
+    esac
 fi
 
 # if there are none, start tags at INITIAL_VERSION which defaults to 0.0.0
