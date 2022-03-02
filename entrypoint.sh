@@ -50,7 +50,7 @@ tagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+$"
 preTagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+(-$suffix\.[0-9]+)?$" 
 
 tag=""
-pre_taglist=""
+pre_tag=""
 
 if [ -z "$prefix" ]
 then
