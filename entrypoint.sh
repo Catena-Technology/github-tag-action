@@ -3,7 +3,7 @@
 set -o pipefail
 
 # config
-default_semvar_bump=${DEFAULT_BUMP:-minor}
+default_semvar_bump=${DEFAULT_BUMP:-""}
 with_v=${WITH_V:-false}
 release_branches=${RELEASE_BRANCHES:-master,main}
 custom_tag=${CUSTOM_TAG}
@@ -14,6 +14,10 @@ initial_version=${INITIAL_VERSION:-0.0.0}
 tag_context=${TAG_CONTEXT:-repo}
 suffix=${PRERELEASE_SUFFIX:-prerelease}
 verbose=${VERBOSE:-true}
+major=${MAJOR:-#major}
+minor=${MINOR:-#minor}
+patch=${PATCH:-#patch}
+force=${FORCE:-false}
 
 cd ${GITHUB_WORKSPACE}/${source}
 
@@ -29,6 +33,11 @@ echo -e "\tINITIAL_VERSION: ${initial_version}"
 echo -e "\tTAG_CONTEXT: ${tag_context}"
 echo -e "\tPRERELEASE_SUFFIX: ${suffix}"
 echo -e "\tVERBOSE: ${verbose}"
+echo -e "\tMAJOR: ${major}"
+echo -e "\tMINOR: ${minor}"
+echo -e "\tPATCH: ${patch}"
+echo -e "\tFORCE: ${force}"
+
 
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 
@@ -48,9 +57,6 @@ git fetch --tags
     
 tagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+$" 
 preTagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+(-$suffix\.[0-9]+)?$" 
-
-tag=""
-pre_tag=""
 
 if [ -z "$prefix" ]
 then
@@ -118,20 +124,39 @@ then
   echo $log
 fi
 
+shopt -s extglob;
 case "$log" in
-    *#major* ) new=$(semver -i major $tag); part="major";;
-    *#minor* ) new=$(semver -i minor $tag); part="minor";;
-    *#patch* ) new=$(semver -i patch $tag); part="patch";;
-    *#none* ) 
-        echo "Default bump was set to none. Skipping..."; echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0;;
+    @($major) ) new=$(semver -i major $tag); part="major";;
+    @($minor) ) new=$(semver -i minor $tag); part="minor";;
+    @($patch) ) new=$(semver -i patch $tag); part="patch";;
     * ) 
-        if [ "$default_semvar_bump" == "none" ]; then
+        if [ -z "$default_semvar_bump" ]; then
             echo "Default bump was set to none. Skipping..."; echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0 
         else 
             new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump 
         fi 
         ;;
 esac
+shopt -u extglob;
+
+if $force
+then
+  IFS=$'\n' read -d '' -a array <<< `git log --pretty=format:"%s" $current_branch --reverse --no-merges`
+  new=$initial_version
+  shopt -s extglob;
+  for i in "${array[@]}"
+  do 
+    case "$i" in
+      @($major) ) new=$(semver -i major $tag) ;;
+      @($minor) ) new=$(semver -i minor $tag) ;;
+      @($patch) ) new=$(semver -i patch $tag) ;;
+      * ) [ -z "$default_semvar_bump" ] || new=$(semver -i "${default_semvar_bump}" $tag) ;;
+    esac
+    tag=$new
+  done
+  shopt -u extglob;
+fi
+
 
 if $pre_release
 then
