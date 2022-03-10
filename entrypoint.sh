@@ -13,7 +13,6 @@ dryrun=${DRY_RUN:-false}
 initial_version=${INITIAL_VERSION:-0.0.0}
 tag_context=${TAG_CONTEXT:-repo}
 suffix=${PRERELEASE_SUFFIX:-prerelease}
-verbose=${VERBOSE:-true}
 major=${MAJOR:-#major}
 minor=${MINOR:-#minor}
 patch=${PATCH:-#patch}
@@ -32,7 +31,6 @@ echo -e "\tDRY_RUN: ${dryrun}"
 echo -e "\tINITIAL_VERSION: ${initial_version}"
 echo -e "\tTAG_CONTEXT: ${tag_context}"
 echo -e "\tPRERELEASE_SUFFIX: ${suffix}"
-echo -e "\tVERBOSE: ${verbose}"
 echo -e "\tMAJOR: ${major}"
 echo -e "\tMINOR: ${minor}"
 echo -e "\tPATCH: ${patch}"
@@ -96,14 +94,11 @@ fi
 # if there are none, start tags at INITIAL_VERSION which defaults to 0.0.0
 if [ -z "$tag" ]
 then
-    log=$(git log --pretty='%B')
     tag="$initial_version"
     if [ -z "$pre_tag" ] && $pre_release
     then
       pre_tag="$initial_version"
     fi
-else
-    log=$(git log $tag..HEAD --pretty='%B')
 fi
 
 # get current commit hash for tag
@@ -116,12 +111,6 @@ if [ "$tag_commit" == "$commit" ]; then
     echo "No new commits since previous tag. Skipping..."
     echo ::set-output name=tag::$tag
     exit 0
-fi
-
-# echo log if verbose is wanted
-if $verbose
-then
-  echo $log
 fi
 
 shopt -s extglob;
