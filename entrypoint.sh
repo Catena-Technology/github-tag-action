@@ -113,26 +113,12 @@ if [ "$tag_commit" == "$commit" ]; then
     exit 0
 fi
 
-shopt -s extglob;
-case "$log" in
-    @($major) ) new=$(semver -i major $tag); part="major";;
-    @($minor) ) new=$(semver -i minor $tag); part="minor";;
-    @($patch) ) new=$(semver -i patch $tag); part="patch";;
-    * ) 
-        if [ -z "$default_semvar_bump" ]; then
-            echo "Default bump was set to none. Skipping..."; echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0 
-        else 
-            new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump 
-        fi 
-        ;;
-esac
-shopt -u extglob;
 
+shopt -s extglob;
 if $force
 then
   IFS=$'\n' read -d '' -a array <<< `git log --pretty=format:"%s" $current_branch --reverse --no-merges`
   new=$initial_version
-  shopt -s extglob;
   for i in "${array[@]}"
   do 
     case "$i" in
@@ -143,8 +129,31 @@ then
     esac
     tag=$new
   done
-  shopt -u extglob;
+  if with_v
+  then
+    [ -z $prefix ] && old=$(git tag --list --sort=-version:refname "$prefix-v*" | head -n 1) || old=$(git tag --list --sort=-version:refname "v*" | head -n 1)
+  else
+    [ -z $prefix ] && old=$(git tag --list --sort=-version:refname "$prefix-*" | head -n 1) || old=$(git tag --list --sort=-version:refname "*" | head -n 1)
+  fi
+  if [ "$old" == "$new" ]
+  then
+    echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0 
+  fi
+else
+  case "$log" in
+    @($major) ) new=$(semver -i major $tag); part="major";;
+    @($minor) ) new=$(semver -i minor $tag); part="minor";;
+    @($patch) ) new=$(semver -i patch $tag); part="patch";;
+    * ) 
+        if [ -z "$default_semvar_bump" ]; then
+            echo "Default bump was set to none. Skipping..."; echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0 
+        else 
+            new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump 
+        fi 
+        ;;
+  esac
 fi
+shopt -u extglob;
 
 
 if $pre_release
