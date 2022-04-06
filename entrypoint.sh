@@ -111,10 +111,10 @@ then
   for i in "${array[@]}"
   do 
     case "$i" in
-      @($major) ) new=$(semver -i major $tag) ;;
-      @($minor) ) new=$(semver -i minor $tag) ;;
-      @($patch) ) new=$(semver -i patch $tag) ;;
-      * ) [ -z "$default_semvar_bump" ] || new=$(semver -i "${default_semvar_bump}" $tag) ;;
+      @($major) ) new=$(semver -i major $tag); part="major" ;;
+      @($minor) ) new=$(semver -i minor $tag); part="minor" ;;
+      @($patch) ) new=$(semver -i patch $tag); part="patch" ;;
+      * ) [ -z "$default_semvar_bump" ] || new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump ;;
     esac
     tag=$new
   done
@@ -156,6 +156,8 @@ fi
 
 echo $part
 
+echo ::set-output name=tag::$new
+
 # prefix with 'v'
 if $with_v
 then
@@ -191,8 +193,6 @@ then
     echo ::set-output name=tag::$tag
     exit 0
 fi 
-
-echo ::set-output name=tag::$new
 
 # create local git tag
 git tag $new

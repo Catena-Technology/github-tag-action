@@ -10,7 +10,14 @@ jobs:
     - uses: actions/checkout@master
       with:
         fetch-depth: '0'
+        
     - name: Bump version and push tag
-      uses: anothrNick/github-tag-action@master
+      uses: Catena-Technology/github-tag-action@master
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        INITIAL_VERSION: 0.0.0
+        RELEASE_BRANCHES: master
+        TAG_CONTEXT: branch
+        MAJOR: "BREAKING*CHANGE|*#major*"
+        MINOR: "*feat*|*#minor*"
+        PATCH: "*fix*|*chore*|*docs*|*update*"
