@@ -52,25 +52,25 @@ echo "pre_release = $pre_release"
 
 # fetch tags
 git fetch --tags
-    
-tagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+$" 
-preTagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+(-$suffix\.[0-9]+)?$" 
+
+tagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+$"
+preTagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+(-$suffix\.[0-9]+)?$"
 
 if [ -z "$prefix" ]
 then
 # get latest tag that looks like a semver (with or without v)
     case "$tag_context" in
-        *repo*) 
+        *repo*)
             taglist="$(git for-each-ref --sort=-v:refname --format '%(refname:lstrip=2)' | grep -E "$tagFmt")"
-			[ -z "$taglist" ] || tag="$(semver $taglist | tail -n 1)"
-    
+            [ -z "$taglist" ] || tag="$(semver $taglist | tail -n 1)"
+
             pre_taglist="$(git for-each-ref --sort=-v:refname --format '%(refname:lstrip=2)' | grep -E "$preTagFmt")"
             [ -z "$pre_taglist" ] || pre_tag="$(semver "$pre_taglist" | tail -n 1)"
             ;;
-        *branch*) 
+        *branch*)
             taglist="$(git tag --list --merged HEAD --sort=-v:refname | grep -E "$tagFmt")"
             [ -z "$taglist" ] || tag="$(semver $taglist | tail -n 1)"
-    
+
             pre_taglist="$(git tag --list --merged HEAD --sort=-v:refname | grep -E "$preTagFmt")"
             [ -z "$pre_taglist" ] || pre_tag=$(semver "$pre_taglist" | tail -n 1)
             ;;
@@ -82,8 +82,8 @@ else
         *repo*)
             taglist="$(git for-each-ref --format '%(refname:lstrip=2)' --sort=-v:refname | grep $prefix- | sed -e "s/^$prefix-//" | grep -E "$tagFmt")"
             [ -z "$taglist" ] || tag="$(semver $taglist | tail -n 1)"
-            ;;            
-        *branch*)         
+            ;;
+        *branch*)
             taglist="$(git tag --list --merged HEAD --sort=-v:refname $prefix* | sed -e "s/^$prefix-//" | grep -E "$tagFmt")"
             [ -z "$taglist" ] || tag="$(semver $taglist | tail -n 1)"
             ;;
@@ -109,7 +109,7 @@ then
   IFS=$'\n' read -d '' -a array <<< $(git log --pretty=format:"%s" $current_branch --reverse --no-merges)
   new=$initial_version
   for i in "${array[@]}"
-  do 
+  do
     case "$i" in
       @($major) ) new=$(semver -i major $tag); part="major" ;;
       @($minor) ) new=$(semver -i minor $tag); part="minor" ;;
@@ -124,7 +124,7 @@ then
   echo $new
   if [ "$old" == "$new" ]
   then
-    echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0 
+    echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0
   fi
 else
   log=$(git log --pretty=format:"%s" $current_branch --no-merges | head -n 1)
@@ -132,12 +132,12 @@ else
     @($major) ) new=$(semver -i major $tag); part="major";;
     @($minor) ) new=$(semver -i minor $tag); part="minor";;
     @($patch) ) new=$(semver -i patch $tag); part="patch";;
-    * ) 
-        if [ -z "$default_semvar_bump" ]; then
-            echo "Default bump was set to none. Skipping..."; echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0 
-        else 
-            new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump 
-        fi 
+    * )
+        if [ -z "$default_semvar_bump" ] && [ -z "$custom_tag"]; then
+            echo "Default bump was set to none. Skipping..."; echo ::set-output name=new_tag::$tag; echo ::set-output name=tag::$tag; exit 0
+        else
+            new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump
+        fi
         ;;
   esac
 fi
@@ -161,7 +161,7 @@ echo ::set-output name=tag::$new
 # prefix with 'v'
 if $with_v
 then
-	new="v$new"
+    new="v$new"
 fi
 
 if [ ! -z $custom_tag ]
@@ -192,34 +192,19 @@ if $dryrun
 then
     echo ::set-output name=tag::$tag
     exit 0
-fi 
+fi
 
 # create local git tag
-git tag $new
+echo "tagging local"
+git tag -f $new
+git describe --tags
+# git tag $new
+echo "push tag to remote"
+git push -f origin $new
 
-# push new tag ref to github
-dt=$(date '+%Y-%m-%dT%H:%M:%SZ')
-full_name=$GITHUB_REPOSITORY
-git_refs_url=$(jq .repository.git_refs_url $GITHUB_EVENT_PATH | tr -d '"' | sed 's/{\/sha}//g')
-
-echo "$dt: **pushing tag $new to repo $full_name"
-
-git_refs_response=$(
-curl -s -X POST $git_refs_url \
--H "Authorization: token $GITHUB_TOKEN" \
--d @- << EOF
-
-{
-  "ref": "refs/tags/$new",
-  "sha": "$commit"
-}
-EOF
-)
-
-git_ref_posted=$( echo "${git_refs_response}" | jq .ref | tr -d '"' )
-
-echo "::debug::${git_refs_response}"
-if [ "${git_ref_posted}" = "refs/tags/${new}" ]; then
+echo "cheking"
+if [ "$?" -eq "0" ]; then
+  echo "task completed"
   exit 0
 else
   echo "::error::Tag was not created properly."
