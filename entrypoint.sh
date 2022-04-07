@@ -164,11 +164,6 @@ then
     new="v$new"
 fi
 
-if [ ! -z $custom_tag ]
-then
-    new="$custom_tag"
-fi
-
 if [ ! -z $prefix ]
 then
     new="$prefix-$new"
@@ -179,6 +174,11 @@ then
     echo -e "Bumping tag ${pre_tag}. \n\tNew tag ${new}"
 else
     echo -e "Bumping tag ${tag}. \n\tNew tag ${new}"
+fi
+
+if [ ! -z $custom_tag ]
+then
+    new="$custom_tag"
 fi
 
 # set outputs
