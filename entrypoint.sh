@@ -107,6 +107,11 @@ commit=$(git rev-parse HEAD)
 
 echo ::set-output name=newhash::$commit
 
+echo "Printing old tag hash"
+echo $oldtaghash
+echo "Print new hash"
+echo $commit
+
 # if there are none, start tags at INITIAL_VERSION which defaults to 0.0.0
 if [ -z "$tag" ]
 then
